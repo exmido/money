@@ -1,4 +1,5 @@
 ﻿#pragma once
 
-#include "qua/qua.h"
 #include "stock/stock.h"
+#include "twse/twse.h"
+#include "wearn/wearn.h"

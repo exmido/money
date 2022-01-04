@@ -10,6 +10,9 @@
 //utility
 namespace utility
 {
+	using namespace std;
+	using namespace miapi;
+
 	//http_load
 	static int32_t http_load(std::string& ret, std::string path, std::string str, std::ostream& out = miapi::utility::nullstream::cnil())
 	{

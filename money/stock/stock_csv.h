@@ -11,8 +11,8 @@ namespace stock
 	using namespace std;
 	using namespace miapi;
 
-	//http_csv
-	class http_csv
+	//stock_csv
+	class stock_csv
 	{
 	protected:
 		//encode
@@ -65,7 +65,7 @@ namespace stock
 		//read
 		double read(size_t c, size_t r)
 		{
-			return encode(value[c][r], value[c - 1][r < http_csv::VALUE_UNKNOWN ? http_csv::VALUE_CLOSE : r]);
+			return encode(value[c][r], value[c - 1][r < stock_csv::VALUE_UNKNOWN ? stock_csv::VALUE_CLOSE : r]);
 		}
 
 		//write
@@ -77,7 +77,7 @@ namespace stock
 				value.back().resize(value[0].size());
 			}
 
-			return value[c][r] = decode(v, value[c - 1][r < http_csv::VALUE_UNKNOWN ? http_csv::VALUE_CLOSE : r]);
+			return value[c][r] = decode(v, value[c - 1][r < stock_csv::VALUE_UNKNOWN ? stock_csv::VALUE_CLOSE : r]);
 		}
 
 		//load

@@ -1,14 +1,15 @@
 #pragma once
 
 #include "qua_http.h"
+#include "stock_http.h"
 
-#include "../stock/stock.h"
-
-//qua
-namespace qua
+//wearn
+namespace wearn
 {
+	using namespace std;
+
 	//qua
-	int qua(string name = "qua", size_t start = 1, size_t count = 50)
+	int qua(string name = "qua", std::function<int32_t(stock::stock_csv&, std::string, size_t, size_t, std::ostream&)> loader = nullptr, size_t start = 1, size_t count = 50)
 	{
 		std::vector<string> data;
 		if (0 != qua_http::load(data))
@@ -39,14 +40,14 @@ namespace qua
 #ifdef  WIN32
 			SetConsoleTitle((name + " " + data[i] + " " + to_string(i + 1) + "/" + to_string(end)).c_str());
 #endif
-			stock::stock(data[i]);
+			stock::stock(data[i], loader);
 		}
 
 		return 0;
 	}
 
 	//qua_main
-	int qua_main(int argc, char** argv)
+	int qua_main(int argc, char** argv, std::function<int32_t(stock::stock_csv&, std::string, size_t, size_t, std::ostream&)> loader = nullptr)
 	{
 		string name = "qua";
 		size_t start = 1;
@@ -64,6 +65,6 @@ namespace qua
 				continue;
 		}
 
-		return qua(name, start, count);
+		return qua(name, loader, start, count);
 	}
 }

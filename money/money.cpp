@@ -1,13 +1,27 @@
 ﻿#include "money.h"
-using namespace qua;
-using namespace stock;
+
+//loader
+int32_t load(stock::stock_csv& csv, std::string name, size_t filter, size_t training, std::ostream& out)
+{
+	if (0 == twse::stock_http::load(csv, name, filter, training, out))
+		return 0;
+
+	if (0 == wearn::stock_http::load(csv, name, filter, training, out))
+		return 0;
+
+	return 0;
+}
 
 //main
 int main(int argc, char** argv)
 {
-	string name(1 < argc ? argv[1] : "");
-	if (name == "qua")
-		return qua_main(argc, argv);
+#ifdef  WIN32
+	SetConsoleOutputCP(CP_UTF8);
+#endif
 
-	return stock_main(argc, argv);
+	std::string name(1 < argc ? argv[1] : "");
+	if (name == "qua")
+		return wearn::qua_main(argc, argv, load);
+
+	return stock::stock_main(argc, argv, load);
 }

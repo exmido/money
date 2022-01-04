@@ -69,7 +69,7 @@ namespace stock
 		}
 
 		//read_value
-		void read_value(typename decltype(net)::node_type* n, size_t size, http_csv& csv, size_t column)
+		void read_value(typename decltype(net)::node_type* n, size_t size, stock_csv& csv, size_t column)
 		{
 			size_t row = csv.value[0].size();
 			for (size_t i = 0; i < size; ++i)
@@ -77,7 +77,7 @@ namespace stock
 		}
 
 		//write_value
-		void write_value(decltype(net)::node_type* n, size_t size, http_csv& csv, size_t column, std::ostream& out)
+		void write_value(decltype(net)::node_type* n, size_t size, stock_csv& csv, size_t column, std::ostream& out)
 		{
 			size_t row = csv.value[0].size();
 
@@ -95,7 +95,7 @@ namespace stock
 		}
 
 		//error_value
-		double error_value(typename decltype(net)::node_type* n, size_t size, http_csv& csv, size_t column)
+		double error_value(typename decltype(net)::node_type* n, size_t size, stock_csv& csv, size_t column)
 		{
 			double ret = 0.0;
 
@@ -107,7 +107,7 @@ namespace stock
 		}
 
 		//training
-		double training(http_csv& csv, size_t index, size_t filter, double rate, double momentum)
+		double training(stock_csv& csv, size_t index, size_t filter, double rate, double momentum)
 		{
 			if (index <= 0)
 				return DBL_MAX;
@@ -135,20 +135,20 @@ namespace stock
 		}
 
 		//check
-		bool check(http_csv& csv, size_t filter)
+		bool check(stock_csv& csv, size_t filter)
 		{
 			//forward
 			read_value(net.input_array(), net.input_size() - 1, csv, csv.value.size() - filter - 1);
 			net.culcate();
 
 			//check limit
-			if (net.output_array()[http_csv::VALUE_HIGH].value >= net.output_array()[http_csv::VALUE_LOW].value		// upper >= lower
+			if (net.output_array()[stock_csv::VALUE_HIGH].value >= net.output_array()[stock_csv::VALUE_LOW].value		// upper >= lower
 				// lower <= start <= upper
-				&& net.output_array()[http_csv::VALUE_OPEN].value >= net.output_array()[http_csv::VALUE_LOW].value
-				&& net.output_array()[http_csv::VALUE_OPEN].value <= net.output_array()[http_csv::VALUE_HIGH].value
+				&& net.output_array()[stock_csv::VALUE_OPEN].value >= net.output_array()[stock_csv::VALUE_LOW].value
+				&& net.output_array()[stock_csv::VALUE_OPEN].value <= net.output_array()[stock_csv::VALUE_HIGH].value
 				// lower <= end <= upper
-				&& net.output_array()[http_csv::VALUE_CLOSE].value >= net.output_array()[http_csv::VALUE_LOW].value
-				&& net.output_array()[http_csv::VALUE_CLOSE].value <= net.output_array()[http_csv::VALUE_HIGH].value)
+				&& net.output_array()[stock_csv::VALUE_CLOSE].value >= net.output_array()[stock_csv::VALUE_LOW].value
+				&& net.output_array()[stock_csv::VALUE_CLOSE].value <= net.output_array()[stock_csv::VALUE_HIGH].value)
 			{
 				return true;
 			}
@@ -157,10 +157,10 @@ namespace stock
 		}
 
 		//run
-		int32_t run(http_csv& csv, std::ostream& out, size_t index, size_t filter, size_t epoch, double error, size_t retry, size_t result = 0)
+		bool run(stock_csv& csv, std::ostream& out, size_t index, size_t filter, size_t epoch, double error, size_t retry, size_t result = 0)
 		{
 			if (index <= 0)
-				return __LINE__;
+				return false;
 
 			//run
 			for (size_t i = 1; i <= retry; ++i)
@@ -194,7 +194,7 @@ namespace stock
 
 			//check result
 			if (epoch > 0)
-				return __LINE__;
+				return false;
 
 			//out
 			if (result > 0)
@@ -228,7 +228,7 @@ namespace stock
 				}
 			}
 
-			return 0;
+			return true;
 		}
 	};
 }

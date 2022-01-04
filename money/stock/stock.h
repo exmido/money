@@ -1,64 +1,73 @@
 #pragma once
 
+#include "../utility.h"
+
 #include "stock_csv.h"
-#include "stock_http.h"
 #include "stock_nn.h"
 
 //stock
 namespace stock
 {
 	//stock
-	int stock(string name, size_t filter = 15, size_t training = 9, size_t index = 1, size_t result = 10)
+	bool stock(stock_csv& csv, std::ostream& out, string name, size_t filter = 15, size_t training = 9, size_t index = 1, size_t result = 10)
 	{
-		http_csv csv;
-		stock_nn nn;
-
-		std::ofstream out(name + ".txt", std::ios::binary);
-		if (!out.is_open())
-			return __LINE__;
-
-		//load csv
-		if (csv.load(name, filter, training, out) != 0 && stock_http::load(csv, name, filter, training, out) != 0)
-			return __LINE__;
-
-		cout << endl;
-
 		//load nn
 		size_t row = csv.value[0].size();
 		size_t inner_size = row * filter + row;
+
+		stock_nn nn;
 		nn.net.reset({ row * filter, inner_size, inner_size, inner_size, row }, 1.0f);
 
-		nn.load(name + ".net");
+		nn.load(name);
 
 		//run
-		int ret = 0;
 		for (; index < csv.value.size() - filter - 1; ++index)
 		{
 			cout << "index : " << index << endl;
 
-			ret = nn.run(csv, out, index, filter, 1000, 0.1, 100);
-			if (ret != 0)
+			if (false == nn.run(csv, out, index, filter, 1000, 0.1, 100))
 				continue;
 
-			ret = nn.run(csv, out, index, filter, 10000, 0.01, 10);
-			if (ret != 0)
+			if (false == nn.run(csv, out, index, filter, 10000, 0.01, 10))
 				continue;
 
-			ret = nn.run(csv, out, index, (size_t)filter, 100000, 0.001, 1, (size_t)result);
-			if (ret != 0)
+			if (false == nn.run(csv, out, index, (size_t)filter, 100000, 0.001, 1, (size_t)result))
 				continue;
 
 			cout << endl << "Succeed";
-			return 0;
+			return true;
 		}
 
 		cout << endl << "Fail";
 		//cin.get();
-		return ret;
+		return false;
+	}
+
+	int32_t stock(string name, std::function<int32_t(stock::stock_csv& csv, std::string name, size_t filter, size_t training, std::ostream& out)> loader = nullptr, size_t filter = 15, size_t training = 9, size_t index = 1, size_t result = 10)
+	{
+		//out
+		std::ofstream out(name + ".txt", std::ios::binary);
+		if (!out.is_open())
+			return __LINE__;
+
+		//csv
+		stock_csv csv;
+		if (csv.load(name, filter, training, out) != 0)
+		{
+			if (loader == nullptr || loader(csv, name, filter, training, out) != 0)
+				return __LINE__;
+		}
+
+		cout << endl;
+
+		if (!stock(csv, out, name + ".net", filter, training, index, result))
+			return __LINE__;
+
+		return 0;
 	}
 
 	//stock_main
-	int stock_main(int argc, char** argv)
+	int stock_main(int argc, char** argv, std::function<int32_t(stock::stock_csv&, std::string, size_t, size_t, std::ostream&)> loader = nullptr)
 	{
 		string name(1 < argc ? argv[1] : "");
 
@@ -92,6 +101,6 @@ namespace stock
 				continue;
 		}
 
-		return stock(name, filter, training, index, result);
+		return stock(name, loader, filter, training, index, result);
 	}
 }

@@ -4,8 +4,8 @@
 
 #include "../../miapi/miapi/std/miw.h"
 
-//qua
-namespace qua
+//wearn
+namespace wearn
 {
 	using namespace std;
 	using namespace miapi;

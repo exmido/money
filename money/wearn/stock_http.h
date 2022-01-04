@@ -1,12 +1,12 @@
 #pragma once
 
-#include "../utility.h"
+#include "../stock/stock.h"
 
-#include "stock_csv.h"
-
-//stock
-namespace stock
+//wearn
+namespace wearn
 {
+	using namespace stock;
+
 	//stock_http
 	class stock_http
 	{
@@ -155,14 +155,14 @@ namespace stock
 
 	public:
 		//load
-		static int32_t load(http_csv& csv, string id, size_t filter, size_t training, std::ostream& out)
+		static int32_t load(stock_csv& csv, string name, size_t filter, size_t training, std::ostream& out)
 		{
 			//download
 			string buffer;
 			buffer.reserve(128 * 1024);
 
 			auto path = "https://stock.wearn.com";
-			if (0 != ::utility::http_load(buffer, path, string("/cdata.asp?kind=") + id, cout))
+			if (0 != ::utility::http_load(buffer, path, string("/cdata.asp?kind=") + name, cout))
 				return __LINE__;
 
 			//year
@@ -187,7 +187,7 @@ namespace stock
 
 			if (year != 0 && month != 0)
 			{
-				for (int i = 0; i < (filter + training + 1) / 15 + 1; ++i)
+				for (size_t i = 0; i < (filter + training + 1) / 15 + 1; ++i)
 				{
 					if (--month <= 0)
 					{
@@ -197,7 +197,7 @@ namespace stock
 
 					str = month < 10 ? "0" : "";
 
-					if (0 != ::utility::http_load(buffer, path, string("/cdata.asp?Year=") + std::to_string(year) + string("&month=") + str + std::to_string(month) + string("&kind=") + id))
+					if (0 != ::utility::http_load(buffer, path, string("/cdata.asp?Year=") + std::to_string(year) + string("&month=") + str + std::to_string(month) + string("&kind=") + name))
 						break;
 				}
 			}
