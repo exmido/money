@@ -6,10 +6,13 @@ int32_t load(stock::stock_csv& csv, std::string name, size_t filter, size_t trai
 	if (0 == twse::stock_http::load(csv, name, filter, training, out))
 		return 0;
 
+	if (0 == yahoo::stock_http::load(csv, name, filter, training, out))
+		return 0;
+
 	if (0 == wearn::stock_http::load(csv, name, filter, training, out))
 		return 0;
 
-	return 0;
+	return __LINE__;
 }
 
 //main
