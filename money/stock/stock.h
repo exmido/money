@@ -12,11 +12,19 @@ namespace stock
 	bool stock(stock_csv& csv, std::ostream& out, string name, size_t filter = 15, size_t training = 9, size_t index = 1, size_t result = 10)
 	{
 		//load nn
-		size_t row = csv.value[0].size();
-		size_t inner_size = row * filter + row;
+		int32_t row = static_cast<int32_t>(csv.value[0].size());
+		int32_t inner_size = static_cast<int32_t>(row * filter + row);
 
 		stock_nn nn;
-		nn.net.reset({ row * filter, inner_size, inner_size, inner_size, row }, 1.0f);
+		nn.re.seed(static_cast<int32_t>(std::time(nullptr)));
+
+		nn.net.connect(2, std::make_shared<nn::neural_x<nn::fun_relu<double>>>(inner_size + 1, row));
+		nn.net.connect(1, std::make_shared<nn::neural_x<nn::fun_relu<double>>>(inner_size + 1, inner_size));
+		nn.net.connect(0, std::make_shared<nn::neural_x<nn::fun_relu<double>>>(static_cast<int32_t>(row * filter + 1), inner_size));
+
+		//target buffer
+		nn.net.io.push_back({});
+		nn.net.io.back().resize(nn.net.out_size());
 
 		nn.load(name);
 

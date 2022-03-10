@@ -2,7 +2,7 @@
 
 #include <iomanip>
 
-#include "../../miapi/miapi/std/neural_network.h"
+#include "../../miapi/miapi/std/nn.h"
 
 #include "stock_csv.h"
 
@@ -16,18 +16,25 @@ namespace stock
 		string filename;
 
 	public:
-		neural_network::network_backprop<neural_network::node_fun_lrelu<neural_network::network_backprop_node<double>>> net;
+		nn::network<double> net;
+		std::shared_ptr<double> work;
+		std::default_random_engine re;
+
+		//neural_reset
+		void neural_reset()
+		{
+			net.neural_reset(re, 0, 0.01);
+		}
 
 		//size
 		size_t size()
 		{
-			return (net.end() - net.begin()) * sizeof(*net.begin());
-		}
+			size_t ret = 0;
 
-		//random_weights
-		void random_weights()
-		{
-			net.random_weights(0, 0.01);
+			for (int32_t i = 0; i < net.neural.size(); ++i)
+				ret += sizeof(double) * net.neural[i]->row() * net.neural[i]->column();
+
+			return ret;
 		}
 
 		//load
@@ -40,12 +47,23 @@ namespace stock
 				return __LINE__;
 
 			//read record
-			auto file = mem::load_file<utf::utf8>(filename);
+			auto file = mem::load_file<double>(filename);
 			if (file.first && size() == file.second)
-				memcpy(net.begin(), file.first.get(), file.second);
-			else
-				random_weights();
+			{
+				auto m = std::make_pair<double*, size_t>((double*)file.first.get(), (size_t)file.second);
 
+				for (int32_t i = 0; i < static_cast<int32_t>(net.neural.size()); ++i)
+				{
+					auto size = sizeof(double) * net.neural[i]->row() * net.neural[i]->column();
+					memcpy(&net.neural[i]->weight()[0][0], miapi::mem::serial<double>(m, size), size);
+				}
+			}
+			else
+			{
+				neural_reset();
+			}
+
+			net.io_reset(1);
 			return 0;
 		}
 
@@ -63,31 +81,36 @@ namespace stock
 			if (!file.is_open())
 				return __LINE__;
 
-			file.write((char*)net.begin(), size());
+			//
+			for (int32_t i = 0; i < static_cast<int32_t>(net.neural.size()); ++i)
+			{
+				auto size = sizeof(double) * net.neural[i]->row() * net.neural[i]->column();
+				file.write((char*)&net.neural[i]->weight()[0][0], size);
+			}
 
 			return 0;
 		}
 
 		//read_value
-		void read_value(typename decltype(net)::node_type* n, size_t size, stock_csv& csv, size_t column)
+		void read_value(double* n, size_t size, stock_csv& csv, size_t column)
 		{
 			size_t row = csv.value[0].size();
 			for (size_t i = 0; i < size; ++i)
-				n[i].value = csv.read(column + i / row, i % row);
+				n[i] = csv.read(column + i / row, i % row);
 		}
 
 		//write_value
-		void write_value(decltype(net)::node_type* n, size_t size, stock_csv& csv, size_t column, std::ostream& out)
+		void write_value(double* n, size_t size, stock_csv& csv, size_t column, std::ostream& out)
 		{
 			size_t row = csv.value[0].size();
 
 			size_t i = 0;
-			double v = csv.write(column + i / row, i % row, n[i].value);
+			double v = csv.write(column + i / row, i % row, n[i]);
 			out << fixed << setprecision(2) << v;
 
 			for (++i; i < size; ++i)
 			{
-				v = csv.write(column + i / row, i % row, n[i].value);
+				v = csv.write(column + i / row, i % row, n[i]);
 				out << " \t" << fixed << setprecision(2) << v;
 			}
 
@@ -95,19 +118,22 @@ namespace stock
 		}
 
 		//error_value
-		double error_value(typename decltype(net)::node_type* n, size_t size, stock_csv& csv, size_t column)
+		double error_value(double* n, size_t size, stock_csv& csv, size_t column)
 		{
 			double ret = 0.0;
 
 			size_t row = csv.value[0].size();
 			for (size_t i = 0; i < size; ++i)
-				ret += abs(n[i].value - csv.read(column + i / row, i % row));
+			{
+				auto v = n[i] - csv.read(column + i / row, i % row);
+				ret += (v * v);
+			}
 
-			return ret;
+			return 0.5 * ret;
 		}
 
 		//training
-		double training(stock_csv& csv, size_t index, size_t filter, double rate, double momentum)
+		double training(stock_csv& csv, size_t index, size_t filter, double rate)
 		{
 			if (index <= 0)
 				return DBL_MAX;
@@ -118,17 +144,17 @@ namespace stock
 			for (size_t i = index; i < csv.value.size() - filter - 1; ++i)
 			{
 				//forward
-				read_value(net.input_array(), net.input_size() - 1, csv, i);
-				net.culcate();
+				read_value(net.in(), net.in_size() - 1, csv, i);
+				net.forward();
 
 				//back
-				read_value(net.target_array(), net.target_size(), csv, i + filter);
+				read_value(net.io.back().data(), net.out_size(), csv, i + filter);
 
 				//check error
-				ret = std::max(ret, error_value(net.output_array(), net.output_size(), csv, i + filter));
+				ret = std::max(ret, error_value(net.out(), net.out_size(), csv, i + filter));
 				t += 1;
 
-				net.change_weights(rate, momentum);
+				work = net.backward(net.io.back().data(), rate, work);
 			}
 
 			return ret;
@@ -138,17 +164,17 @@ namespace stock
 		bool check(stock_csv& csv, size_t filter)
 		{
 			//forward
-			read_value(net.input_array(), net.input_size() - 1, csv, csv.value.size() - filter - 1);
-			net.culcate();
+			read_value(net.in(), net.in_size() - 1, csv, csv.value.size() - filter - 1);
+			net.forward();
 
 			//check limit
-			if (net.output_array()[stock_csv::VALUE_HIGH].value >= net.output_array()[stock_csv::VALUE_LOW].value		// upper >= lower
+			if (net.out()[stock_csv::VALUE_HIGH] >= net.out()[stock_csv::VALUE_LOW]		// upper >= lower
 				// lower <= start <= upper
-				&& net.output_array()[stock_csv::VALUE_OPEN].value >= net.output_array()[stock_csv::VALUE_LOW].value
-				&& net.output_array()[stock_csv::VALUE_OPEN].value <= net.output_array()[stock_csv::VALUE_HIGH].value
+				&& net.out()[stock_csv::VALUE_OPEN] >= net.out()[stock_csv::VALUE_LOW]
+				&& net.out()[stock_csv::VALUE_OPEN] <= net.out()[stock_csv::VALUE_HIGH]
 				// lower <= end <= upper
-				&& net.output_array()[stock_csv::VALUE_CLOSE].value >= net.output_array()[stock_csv::VALUE_LOW].value
-				&& net.output_array()[stock_csv::VALUE_CLOSE].value <= net.output_array()[stock_csv::VALUE_HIGH].value)
+				&& net.out()[stock_csv::VALUE_CLOSE] >= net.out()[stock_csv::VALUE_LOW]
+				&& net.out()[stock_csv::VALUE_CLOSE] <= net.out()[stock_csv::VALUE_HIGH])
 			{
 				return true;
 			}
@@ -170,7 +196,7 @@ namespace stock
 				double e = 0;
 				for (size_t j = 1; j <= epoch; ++j)
 				{
-					e = training(csv, index, filter, 0.5, 0.05);
+					e = training(csv, index, filter, 0.5);
 					if (error > e)
 					{
 						cout << "epoch : " << i << ", " << j << endl;
@@ -185,7 +211,7 @@ namespace stock
 				cout << fixed << setprecision(6) << e << endl;
 
 				if (epoch)
-					random_weights();
+					neural_reset();
 				else
 					break;
 			}
@@ -208,23 +234,23 @@ namespace stock
 
 				//outpot
 				out << "999/" << std::setfill('0') << std::setw(2) << ri << "/" << std::setfill('0') << std::setw(2) << rn << "\t";
-				write_value(net.output_array(), net.output_size(), csv, csv.value.size(), out);
+				write_value(net.out(), net.out_size(), csv, csv.value.size(), out);
 
-				size_t index = net.input_size() - 1 - net.output_size();
+				size_t index = net.in_size() - 1 - net.out_size();
 
 				for (; result > 1; --result)
 				{
 					for (size_t i = 0; i < index; ++i)
-						net.input_array()[i] = net.input_array()[i + net.output_size()];
+						net.in()[i] = net.in()[i + net.out_size()];
 
-					for (size_t i = 0; i < net.output_size(); ++i)
-						net.input_array()[i + index] = net.output_array()[i];
+					for (size_t i = 0; i < net.out_size(); ++i)
+						net.in()[i + index] = net.out()[i];
 
-					net.culcate();
+					net.forward();
 
 					//outpot
 					out << "999/" << std::setfill('0') << std::setw(2) << ri << "/" << std::setfill('0') << std::setw(2) << rn << "\t";
-					write_value(net.output_array(), net.output_size(), csv, csv.value.size(), out);
+					write_value(net.out(), net.out_size(), csv, csv.value.size(), out);
 				}
 			}
 
