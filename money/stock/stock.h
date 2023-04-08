@@ -18,9 +18,9 @@ namespace stock
 		stock_nn nn;
 		nn.re.seed(static_cast<int32_t>(std::time(nullptr)));
 
-		nn.net.connect(2, std::make_shared<nn::neural_x<nn::fun_relu<double>>>(inner_size + 1, row));
-		nn.net.connect(1, std::make_shared<nn::neural_x<nn::fun_relu<double>>>(inner_size + 1, inner_size));
-		nn.net.connect(0, std::make_shared<nn::neural_x<nn::fun_relu<double>>>(static_cast<int32_t>(row * filter + 1), inner_size));
+		nn.net.connect(2, std::make_shared<nn::neural<nn::fun_relu<double>>>(inner_size + 1, row));
+		nn.net.connect(1, std::make_shared<nn::neural<nn::fun_relu<double>>>(inner_size + 1, inner_size));
+		nn.net.connect(0, std::make_shared<nn::neural<nn::fun_relu<double>>>(static_cast<int32_t>(row * filter + 1), inner_size));
 
 		//target buffer
 		nn.net.io.push_back({});
