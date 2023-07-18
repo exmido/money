@@ -18,9 +18,10 @@ namespace stock
 		stock_nn nn;
 		nn.re.seed(static_cast<int32_t>(std::time(nullptr)));
 
-		nn.net.connect(2, std::make_shared<nn::neural<nn::fun_relu<double>>>(inner_size + 1, row));
-		nn.net.connect(1, std::make_shared<nn::neural<nn::fun_relu<double>>>(inner_size + 1, inner_size));
-		nn.net.connect(0, std::make_shared<nn::neural<nn::fun_relu<double>>>(static_cast<int32_t>(row * filter + 1), inner_size));
+		nn.net.simpler(new nn::smp_stochastic<double>());
+		nn.net.connect(2, inner_size + 1, row, new nn::act_relu<double>(), new nn::opt_momentum<double>());
+		nn.net.connect(1, inner_size + 1, inner_size, new nn::act_relu<double>(), new nn::opt_momentum<double>());
+		nn.net.connect(0, static_cast<int32_t>(row * filter + 1), inner_size, new nn::act_relu<double>(), new nn::opt_momentum<double>());
 
 		//target buffer
 		nn.net.io.push_back({});
@@ -77,8 +78,11 @@ namespace stock
 	//stock_main
 	int stock_main(int argc, char** argv, std::function<int32_t(stock::stock_csv&, std::string, size_t, size_t, std::ostream&)> loader = nullptr)
 	{
+#if _DEBUG
+		string name(1 < argc ? argv[1] : "2330.TW");
+#else
 		string name(1 < argc ? argv[1] : "");
-
+#endif
 		if (name == "")
 		{
 			cout << "(<filename> | <id>) <filter=15>? <training=9>? <index=1>? <result=10>?" << endl;

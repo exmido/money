@@ -31,8 +31,8 @@ namespace stock
 		{
 			size_t ret = 0;
 
-			for (int32_t i = 0; i < net.neural.size(); ++i)
-				ret += sizeof(double) * net.neural[i]->row() * net.neural[i]->column();
+			for (int32_t i = 0; i < net.neurals.size(); ++i)
+				ret += sizeof(double) * net.neurals[i].row() * net.neurals[i].column();
 
 			return ret;
 		}
@@ -52,10 +52,10 @@ namespace stock
 			{
 				auto m = std::make_pair<double*, size_t>((double*)file.first.get(), (size_t)file.second);
 
-				for (int32_t i = 0; i < static_cast<int32_t>(net.neural.size()); ++i)
+				for (int32_t i = 0; i < static_cast<int32_t>(net.neurals.size()); ++i)
 				{
-					auto size = sizeof(double) * net.neural[i]->row() * net.neural[i]->column();
-					memcpy(&net.neural[i]->weight()[0][0], miapi::mem::serial<double>(m, size), size);
+					auto size = sizeof(double) * net.neurals[i].row() * net.neurals[i].column();
+					memcpy(&net.neurals[i].weight()[0][0], miapi::mem::serial<double>(m, size), size);
 				}
 			}
 			else
@@ -82,10 +82,10 @@ namespace stock
 				return __LINE__;
 
 			//
-			for (int32_t i = 0; i < static_cast<int32_t>(net.neural.size()); ++i)
+			for (int32_t i = 0; i < static_cast<int32_t>(net.neurals.size()); ++i)
 			{
-				auto size = sizeof(double) * net.neural[i]->row() * net.neural[i]->column();
-				file.write((char*)&net.neural[i]->weight()[0][0], size);
+				auto size = sizeof(double) * net.neurals[i].row() * net.neurals[i].column();
+				file.write((char*)&net.neurals[i].weight()[0][0], size);
 			}
 
 			return 0;
@@ -133,7 +133,7 @@ namespace stock
 		}
 
 		//training
-		double training(stock_csv& csv, size_t index, size_t filter, double rate)
+		double training(stock_csv& csv, size_t index, size_t filter)
 		{
 			if (index <= 0)
 				return DBL_MAX;
@@ -154,7 +154,11 @@ namespace stock
 				ret = std::max(ret, error_value(net.out(), net.out_size(), csv, i + filter));
 				t += 1;
 
-				work = net.backward(net.io.back().data(), rate, work);
+				work = net.backward(net.io.back().data(), work);
+
+				//reset padding
+				for (int32_t j = 0; j < net.neurals.size(); ++j)
+					net.neurals[j].in[net.neurals[j].row() - 1] = 1;
 			}
 
 			return ret;
@@ -196,7 +200,7 @@ namespace stock
 				double e = 0;
 				for (size_t j = 1; j <= epoch; ++j)
 				{
-					e = training(csv, index, filter, 0.5);
+					e = training(csv, index, filter);
 					if (error > e)
 					{
 						cout << "epoch : " << i << ", " << j << endl;

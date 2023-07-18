@@ -162,7 +162,7 @@ namespace stock
 			decltype(c)::data_type cd;
 
 			//check csv file
-			if (!c.read(cd, utf::skipbom(file.first.get()), mem::offset(file.first.get(), file.second)))
+			if (!c.read(cd, utf::skipbom(file.first.get()), mem::offset_byte(file.first.get(), file.second)))
 				return __LINE__;
 
 			cout << filename << endl << endl;
