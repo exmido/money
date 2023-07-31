@@ -33,13 +33,13 @@ namespace stock
 		{
 			cout << "index : " << index << endl;
 
-			if (false == nn.run(csv, out, index, filter, 1000, 0.1, 100))
+			if (false == nn.run(csv, out, index, filter, 100, 0.1, 100))
 				continue;
 
-			if (false == nn.run(csv, out, index, filter, 10000, 0.01, 10))
+			if (false == nn.run(csv, out, index, filter, 1000, 0.01, 10))
 				continue;
 
-			if (false == nn.run(csv, out, index, (size_t)filter, 100000, 0.001, 1, (size_t)result))
+			if (false == nn.run(csv, out, index, (size_t)filter, 10000, 0.001, 1, (size_t)result))
 				continue;
 
 			cout << endl << "Succeed";

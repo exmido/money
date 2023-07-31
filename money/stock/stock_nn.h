@@ -23,7 +23,7 @@ namespace stock
 		//neural_reset
 		void neural_reset()
 		{
-			net.neural_reset(re, 0, 0.01);
+			net.neural_reset(0, 0.01, re);
 		}
 
 		//size
@@ -145,7 +145,7 @@ namespace stock
 			{
 				//forward
 				read_value(net.in(), net.in_size() - 1, csv, i);
-				net.forward();
+				net.forward(true);
 
 				//back
 				read_value(net.io.back().data(), net.out_size(), csv, i + filter);
@@ -169,7 +169,7 @@ namespace stock
 		{
 			//forward
 			read_value(net.in(), net.in_size() - 1, csv, csv.value.size() - filter - 1);
-			net.forward();
+			net.forward(false);
 
 			//check limit
 			if (net.out()[stock_csv::VALUE_HIGH] >= net.out()[stock_csv::VALUE_LOW]		// upper >= lower
@@ -250,7 +250,7 @@ namespace stock
 					for (size_t i = 0; i < net.out_size(); ++i)
 						net.in()[i + index] = net.out()[i];
 
-					net.forward();
+					net.forward(false);
 
 					//outpot
 					out << "999/" << std::setfill('0') << std::setw(2) << ri << "/" << std::setfill('0') << std::setw(2) << rn << "\t";
