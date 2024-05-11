@@ -31,8 +31,8 @@ namespace stock
 		{
 			size_t ret = 0;
 
-			for (int32_t i = 0; i < net.neurals.size(); ++i)
-				ret += sizeof(double) * net.neurals[i].row() * net.neurals[i].column();
+			for (int32_t i = 0; i < net.neural_size(); ++i)
+				ret += sizeof(double) * net[i].row() * net[i].column();
 
 			return ret;
 		}
@@ -52,10 +52,10 @@ namespace stock
 			{
 				auto m = std::make_pair<double*, size_t>((double*)file.first.get(), (size_t)file.second);
 
-				for (int32_t i = 0; i < static_cast<int32_t>(net.neurals.size()); ++i)
+				for (int32_t i = 0; i < static_cast<int32_t>(net.neural_size()); ++i)
 				{
-					auto size = sizeof(double) * net.neurals[i].row() * net.neurals[i].column();
-					memcpy(&net.neurals[i].weight()[0][0], miapi::mem::serial<double>(m, size), size);
+					auto size = sizeof(double) * net[i].row() * net[i].column();
+					memcpy(&net[i].weight()[0][0], miapi::mem::serial<double>(m, size), size);
 				}
 			}
 			else
@@ -82,10 +82,10 @@ namespace stock
 				return __LINE__;
 
 			//
-			for (int32_t i = 0; i < static_cast<int32_t>(net.neurals.size()); ++i)
+			for (int32_t i = 0; i < static_cast<int32_t>(net.neural_size()); ++i)
 			{
-				auto size = sizeof(double) * net.neurals[i].row() * net.neurals[i].column();
-				file.write((char*)&net.neurals[i].weight()[0][0], size);
+				auto size = sizeof(double) * net[i].row() * net[i].column();
+				file.write((char*)&net[i].weight()[0][0], size);
 			}
 
 			return 0;
@@ -141,6 +141,8 @@ namespace stock
 			double ret = 0;
 			double t = 0;
 
+			double* target = net.io_ptr(net.io_size() - 1, net.out_size(), 0);
+
 			for (size_t i = index; i < csv.value.size() - filter - 1; ++i)
 			{
 				//forward
@@ -148,17 +150,17 @@ namespace stock
 				net.forward(true);
 
 				//back
-				read_value(net.io.back().data(), net.out_size(), csv, i + filter);
+				read_value(target, net.out_size(), csv, i + filter);
 
 				//check error
 				ret = std::max(ret, error_value(net.out(), net.out_size(), csv, i + filter));
 				t += 1;
 
-				work = net.backward(net.io.back().data(), work);
+				work = net.backward(target, work);
 
 				//reset padding
-				for (int32_t j = 0; j < net.neurals.size(); ++j)
-					net.neurals[j].in[net.neurals[j].row() - 1] = 1;
+				for (int32_t j = 0; j < net.neural_size(); ++j)
+					net[j].in[net[j].row() - 1] = 1;
 			}
 
 			return ret;
