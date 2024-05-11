@@ -18,13 +18,13 @@ namespace stock
 		stock_nn nn;
 		nn.re.seed(static_cast<int32_t>(std::time(nullptr)));
 
-		nn.net.connect(2, inner_size + 1, row, new nn::act_relu<double>(), new nn::opt_adam<double>());
-		nn.net.connect(1, inner_size + 1, inner_size, new nn::act_relu<double>(), new nn::opt_adam<double>());
-		nn.net.connect(0, static_cast<int32_t>(row * filter + 1), inner_size, new nn::act_relu<double>(), new nn::opt_adam<double>());
+		nn.net.layout(0, static_cast<int32_t>(row * filter + 1), inner_size, new nn::act_relu<double>(), new nn::opt_adam<double>());
+		nn.net.layout(1, inner_size + 1, inner_size, new nn::act_relu<double>(), new nn::opt_adam<double>());
+		nn.net.layout(2, inner_size + 1, row, new nn::act_relu<double>(), new nn::opt_adam<double>());
+		nn.net.connect();
 
 		//target buffer
-		nn.net.io.push_back({});
-		nn.net.io.back().resize(nn.net.out_size());
+		nn.net.io_ptr(static_cast<int32_t>(nn.net.io_size()), nn.net.out_size(), 0);
 
 		nn.load(name);
 
